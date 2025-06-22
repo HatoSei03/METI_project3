@@ -93,6 +93,10 @@ from PIL import Image
 import random
 import os
 
+
+# Set page configuration as the FIRST Streamlit command
+st.set_page_config(page_title="Handwritten Digit Generator", page_icon=":pencil2:", layout="wide")
+
 # Custom CSS for enhanced UI
 st.markdown("""
     <style>
@@ -133,7 +137,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Define the CNN architecture suitable for grayscale images (1 channel)
+# Define the CNN architecture
 class SimpleCNN(nn.Module):
     def __init__(self):
         super(SimpleCNN, self).__init__()
@@ -141,13 +145,13 @@ class SimpleCNN(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1)
         self.fc1 = nn.Linear(64 * 7 * 7, 128)  # Adjusted for 28x28 -> 7x7 after pooling
         self.fc2 = nn.Linear(128, 10)  # Output layer for 10 classes
-        self.pool = nn.MaxPool2d(2, 2)  # Max pooling layer
+        self.pool = nn.MaxPool2d(2, 2)  # Max pooling
         self.dropout = nn.Dropout(0.5)  # Dropout for regularization
 
     def forward(self, x):
         x = self.pool(torch.relu(self.conv1(x)))
         x = self.pool(torch.relu(self.conv2(x)))
-        x = x.view(-1, 64 * 7 * 7)  # Flatten for fully connected layers
+        x = x.view(-1, 64 * 7 * 7)  # Flatten
         x = torch.relu(self.fc1(x))
         x = self.dropout(x)
         x = self.fc2(x)
@@ -176,7 +180,7 @@ def generate_digit_image(digit, model):
     if model is None:
         return None
     try:
-        # Generate random input with correct shape for CNN (1, 1, 28, 28)
+        # Generate random input with shape (1, 1, 28, 28) for CNN
         random_input = torch.randn(1, 1, 28, 28)
         with torch.no_grad():
             output = model(random_input)
@@ -185,15 +189,12 @@ def generate_digit_image(digit, model):
         # Reshape to 28x28 for visualization
         image = random_input.squeeze().numpy()
         image = (image - image.min()) / (image.max() - image.min())  # Normalize to [0, 1]
-        return image
+        return image, predicted_digit
     except Exception as e:
         st.error(f"Error generating image: {str(e)}")
-        return None
+        return None, None
 
-# Streamlit User Interface
-st.set_page_config(page_title="Handwritten Digit Generator", page_icon=":pencil2:", layout="wide")
-
-# Sidebar for additional controls
+# Sidebar for controls
 with st.sidebar:
     st.header("Settings")
     digit = st.slider("Choose a digit (0-9):", 0, 9, 0, key="digit_slider")
@@ -213,22 +214,22 @@ Select a digit and the number of images to generate, then click "Generate Images
 # Button to generate images
 generate_button = st.button("Generate Images")
 
-# Loading spinner while generating
+# Generate and display images
 if generate_button:
     if model is None:
         st.error("Cannot generate images because the model failed to load.")
     else:
         with st.spinner(f"Generating {num_images} images of digit {digit}..."):
-            images = [generate_digit_image(digit, model) for _ in range(num_images)]
-            images = [img for img in images if img is not None]
+            images_with_preds = [generate_digit_image(digit, model) for _ in range(num_images)]
+            images_with_preds = [img for img in images_with_preds if img[0] is not None]
             
-            if images:
+            if images_with_preds:
                 # Display images in a grid
-                cols = st.columns(min(num_images, 5))
-                for idx, (col, image) in enumerate(zip(cols, images)):
+                cols = st.columns(min(len(images_with_preds), 5))
+                for idx, (col, (image, pred_digit)) in enumerate(zip(cols, images_with_preds)):
                     with col:
-                        st.image(image, caption=f"Sample {idx+1}", use_column_width=True)
-                st.success(f"{len(images)} images of digit {digit} generated successfully!")
+                        st.image(image, caption=f"Sample {idx+1} (Pred: {pred_digit})", use_column_width=True)
+                st.success(f"{len(images_with_preds)} images of digit {digit} generated successfully!")
             else:
                 st.error("Failed to generate any images.")
 st.markdown('</div>', unsafe_allow_html=True)
