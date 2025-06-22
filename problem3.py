@@ -162,7 +162,7 @@ class SimpleCNN(nn.Module):
 def load_model():
     try:
         model = SimpleCNN()
-        model_path = 'METI_project3/mnist_model.pth'
+        model_path = 'METI_project3\mnist_model.pth'
         if not os.path.exists(model_path):
             st.error(f"Model file not found at {model_path}")
             return None

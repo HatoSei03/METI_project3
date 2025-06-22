@@ -53,7 +53,7 @@ optimizer = optim.AdamW(model.parameters(), lr=0.001, weight_decay=1e-4)
 scheduler = StepLR(optimizer, step_size=5, gamma=0.1)  # Reduce LR by 0.1 every 5 epochs
 
 # Training loop with validation
-epochs = 15
+epochs = 20
 best_val_accuracy = 0.0
 
 for epoch in range(epochs):
